@@ -1,0 +1,61 @@
+services:
+  vllm_bge:
+    image: vllm/vllm-openai:v0.24.0
+    container_name: vllm_sparse_embedding
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all          # or change to 1, or list device_ids
+              capabilities: [ gpu ]
+              options:
+                runtime: nvidia
+    ports:
+      - "${VLLM_BGE_PORT:-8100}:8000"
+    volumes:
+      - vllm-cache:/root/.cache/huggingface/hub
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - DISABLE_UVICORN_PROPAGATION=true
+      - VLLM_USE_V1=0
+    command: >
+      --model ${BGE_MODEL_NAME:-BAAI/bge-m3}
+      --runner pooling
+      --convert embed
+      --pooler-config.task embed
+      --api-key ${SERVING_API_KEY:-token}
+      --gpu-memory-utilization ${BGE_GPU_MEM_UTIL:-0.3}
+      --hf-overrides '{"architectures":["BgeM3EmbeddingModel"]}'
+
+  vllm_qwen3:
+    image: vllm/vllm-openai:v0.24.0
+    container_name: vllm_dense_embedding
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all          # or change to 1, or list device_ids
+              capabilities: [ gpu ]
+              options:
+                runtime: nvidia
+    ports:
+      - "${VLLM_QWEN3_PORT:-8101}:8000"
+    volumes:
+      - vllm-cache:/root/.cache/huggingface/hub
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - DISABLE_UVICORN_PROPAGATION=true
+      - VLLM_USE_V1=0
+    command: >
+      --model ${QWEN3_MODEL_NAME:-Qwen/Qwen3-Embedding-0.6B}
+      --runner pooling
+      --convert embed
+      --api-key ${SERVING_API_KEY:-token}
+      --gpu-memory-utilization ${QWEN3_GPU_MEM_UTIL:-0.6}
+
+volumes:
+  vllm-cache:

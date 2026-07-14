@@ -5,7 +5,8 @@ export
 # Map model name -> compose file. Add a new line here for each new model.
 qwen3_FILE  := compose_serving.yml
 bge-m3_FILE := bge_compose_serving.yml
-MODELS      := qwen3 bge-m3
+hybrid_FILE := hybrid_compose_serving.yml
+MODELS      := qwen3 bge-m3 hybrid
 DEFAULT_FILE := compose_serving.yml
 
 # Second word on the command line selects the model, e.g. `make up qwen3`.
@@ -13,23 +14,32 @@ MODEL        := $(word 2,$(MAKECMDGOALS))
 COMPOSE_FILE := docker/$(if $(MODEL),$($(MODEL)_FILE),$(DEFAULT_FILE))
 COMPOSE      := docker compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
 
-.PHONY: up down restart logs ps pull status test clean $(MODELS)
+.PHONY: up down restart logs ps pull status test clean check-model $(MODELS)
 
-up: ## make up [qwen3|bge-m3] — start the selected service
+# down/logs/ps/pull act on whichever compose file is currently running, so a
+# missing model would silently fall back to DEFAULT_FILE and look like a bug
+# (e.g. "make logs" showing nothing while "make up hybrid" is running).
+check-model:
+	@if [ -z "$(MODEL)" ]; then \
+		echo "Error: specify a model, e.g. 'make $(firstword $(MAKECMDGOALS)) hybrid' (options: $(MODELS))"; \
+		exit 1; \
+	fi
+
+up: ## make up [qwen3|bge-m3|hybrid] — start the selected service (defaults to qwen3)
 	$(COMPOSE) up -d
 
-down: ## make down [qwen3|bge-m3] — stop the selected service
+down: check-model ## make down <qwen3|bge-m3|hybrid> — stop the selected service
 	$(COMPOSE) down
 
-restart: down up ## make restart [qwen3|bge-m3]
+restart: down up ## make restart <qwen3|bge-m3|hybrid>
 
-logs: ## make logs [qwen3|bge-m3]
+logs: check-model ## make logs <qwen3|bge-m3|hybrid>
 	$(COMPOSE) logs -f
 
-ps: ## make ps [qwen3|bge-m3]
+ps: check-model ## make ps <qwen3|bge-m3|hybrid>
 	$(COMPOSE) ps
 
-pull: ## make pull [qwen3|bge-m3]
+pull: check-model ## make pull <qwen3|bge-m3|hybrid>
 	$(COMPOSE) pull
 
 status: ## Check embedding endpoint health
