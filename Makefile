@@ -3,13 +3,13 @@ include $(ENV_FILE)
 export
 
 # Map model name -> compose file. Add a new line here for each new model.
-qwen3_FILE  := compose_serving.yml
-bge-m3_FILE := bge_compose_serving.yml
+dense_FILE  := dense_compose_serving.yml
+sparse_FILE := sparse_compose_serving.yml
 hybrid_FILE := hybrid_compose_serving.yml
-MODELS      := qwen3 bge-m3 hybrid
-DEFAULT_FILE := compose_serving.yml
+MODELS      := dense sparse hybrid
+DEFAULT_FILE := dense_compose_serving.yml
 
-# Second word on the command line selects the model, e.g. `make up qwen3`.
+# Second word on the command line selects the model, e.g. `make up sparse`.
 MODEL        := $(word 2,$(MAKECMDGOALS))
 COMPOSE_FILE := docker/$(if $(MODEL),$($(MODEL)_FILE),$(DEFAULT_FILE))
 COMPOSE      := docker compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
@@ -25,31 +25,31 @@ check-model:
 		exit 1; \
 	fi
 
-up: ## make up [qwen3|bge-m3|hybrid] — start the selected service (defaults to qwen3)
+up: ## make up [dense|sparse|hybrid] — start the selected service (defaults to dense)
 	$(COMPOSE) up -d
 
-down: check-model ## make down <qwen3|bge-m3|hybrid> — stop the selected service
+down: check-model ## make down <dense|sparse|hybrid> — stop the selected service
 	$(COMPOSE) down
 
-restart: down up ## make restart <qwen3|bge-m3|hybrid>
+restart: down up ## make restart <dense|sparse|hybrid>
 
-logs: check-model ## make logs <qwen3|bge-m3|hybrid>
+logs: check-model ## make logs <dense|sparse|hybrid>
 	$(COMPOSE) logs -f
 
-ps: check-model ## make ps <qwen3|bge-m3|hybrid>
+ps: check-model ## make ps <dense|sparse|hybrid>
 	$(COMPOSE) ps
 
-pull: check-model ## make pull <qwen3|bge-m3|hybrid>
+pull: check-model ## make pull <dense|sparse|hybrid>
 	$(COMPOSE) pull
 
-status: ## Check embedding endpoint health
-	curl -sf http://localhost:$(VLLM_EMBEDDING_PORT)/health && echo "OK"
+status: ## Check the dense embedding endpoint health
+	curl -sf http://localhost:$(VLLM_DENSE_EMBEDDING_PORT)/health && echo "OK"
 
-test: ## Send a sample embedding request
-	curl -s http://localhost:$(VLLM_EMBEDDING_PORT)/v1/embeddings \
+test: ## Send a sample embedding request to the dense endpoint
+	curl -s http://localhost:$(VLLM_DENSE_EMBEDDING_PORT)/v1/embeddings \
 		-H "Authorization: Bearer $(SERVING_API_KEY)" \
 		-H "Content-Type: application/json" \
-		-d '{"model": "$(EMBEDDING_MODEL_NAME)", "input": "Hello world"}'
+		-d '{"model": "$(DENSE_MODEL_NAME)", "input": "Hello world"}'
 
 clean: down ## Stop the service and remove the model cache volume
 	docker volume rm vllm-cache

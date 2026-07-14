@@ -1,7 +1,7 @@
 services:
   vllm_embedding:
     image: vllm/vllm-openai:v0.24.0
-    container_name: vllm_embedding
+    container_name: vllm_sparse_embedding
     restart: unless-stopped
     deploy:
       resources:
@@ -13,7 +13,7 @@ services:
               options:
                 runtime: nvidia
     ports:
-      - "${VLLM_EMBEDDING_PORT:-8100}:8000"
+      - "${VLLM_SPARSE_EMBEDDING_PORT:-8101}:8000"
     volumes:
       - vllm-cache:/root/.cache/huggingface/hub
     environment:
@@ -21,10 +21,12 @@ services:
       - DISABLE_UVICORN_PROPAGATION=true
       - VLLM_USE_V1=0
     command: >
-      --model ${EMBEDDING_MODEL_NAME:-Qwen/Qwen3-Embedding-0.6B}
+      --model ${SPARSE_MODEL_NAME:-BAAI/bge-m3}
       --runner pooling
       --convert embed
+      --pooler-config.task embed
       --api-key ${SERVING_API_KEY:-token}
-      --gpu-memory-utilization ${EMBEDDING_GPU_MEM_UTIL:-0.6}
+      --gpu-memory-utilization ${SPARSE_GPU_MEM_UTIL:-0.8}
+      --hf-overrides '{"architectures":["BgeM3EmbeddingModel"]}'
 volumes:
   vllm-cache:
