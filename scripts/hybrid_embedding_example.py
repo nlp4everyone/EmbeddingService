@@ -14,10 +14,10 @@ load_dotenv(ENV_PATH)
 
 API_KEY = os.environ.get("SERVING_API_KEY", "token")
 
-SPARSE_PORT = os.environ.get("VLLM_SPARSE_EMBEDDING_PORT", "8100")
+SPARSE_PORT = os.environ.get("VLLM_SPARSE_EMBEDDING_PORT", "8101")
 SPARSE_MODEL = os.environ.get("SPARSE_MODEL_NAME", "BAAI/bge-m3")
 
-DENSE_PORT = os.environ.get("VLLM_DENSE_EMBEDDING_PORT", "8101")
+DENSE_PORT = os.environ.get("VLLM_DENSE_EMBEDDING_PORT", "8100")
 DENSE_MODEL = os.environ.get("DENSE_MODEL_NAME", "Qwen/Qwen3-Embedding-0.6B")
 
 

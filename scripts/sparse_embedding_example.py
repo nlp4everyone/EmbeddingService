@@ -9,7 +9,7 @@ from pathlib import Path
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
 
-PORT = os.environ.get("VLLM_SPARSE_EMBEDDING_PORT", "8100")
+PORT = os.environ.get("VLLM_SPARSE_EMBEDDING_PORT", "8101")
 API_KEY = os.environ.get("SERVING_API_KEY", "token")
 MODEL = os.environ.get("SPARSE_MODEL_NAME", "BAAI/bge-m3")
 BASE_URL = f"http://localhost:{PORT}/v1"
