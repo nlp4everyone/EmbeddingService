@@ -12,9 +12,9 @@ from openai import OpenAI
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
 
-PORT = os.environ.get("VLLM_EMBEDDING_PORT", "8100")
+PORT = os.environ.get("VLLM_DENSE_EMBEDDING_PORT", "8100")
 API_KEY = os.environ.get("SERVING_API_KEY", "token")
-MODEL = os.environ.get("EMBEDDING_MODEL_NAME", "Qwen/Qwen3-Embedding-0.6B")
+MODEL = os.environ.get("DENSE_MODEL_NAME", "Qwen/Qwen3-Embedding-0.6B")
 BASE_URL = f"http://localhost:{PORT}/v1"
 
 
