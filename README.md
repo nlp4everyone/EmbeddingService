@@ -1,6 +1,6 @@
 # 🧠 EmbeddingService
 
-A local embedding-model serving environment built on [vLLM](https://github.com/vllm-project/vllm), exposing an OpenAI-compatible `/v1/embeddings` API and optimized for Nvidia GPU acceleration.
+A local embedding-model serving environment built on [Text Embeddings Inference](https://github.com/huggingface/text-embeddings-inference), exposing an OpenAI-compatible `/v1/embeddings` API and optimized for Nvidia GPU acceleration.
 
 ## 📋 Prerequisites
 
@@ -28,13 +28,11 @@ cp .env.sample .env
 # Port config
 SERVING_API_KEY=token
 
-# Model config (dense = Qwen3, sparse = BGE-M3)
-VLLM_DENSE_EMBEDDING_PORT=8100
-VLLM_SPARSE_EMBEDDING_PORT=8101
+# Model config (dense = Qwen3, sparse = SPLADE)
+TEI_DENSE_EMBEDDING_PORT=8100
+TEI_SPARSE_EMBEDDING_PORT=8101
 DENSE_MODEL_NAME=Qwen/Qwen3-Embedding-0.6B
-SPARSE_MODEL_NAME=BAAI/bge-m3
-DENSE_GPU_MEM_UTIL=0.6
-SPARSE_GPU_MEM_UTIL=0.3
+SPARSE_MODEL_NAME=opensearch-project/opensearch-neural-sparse-encoding-multilingual-v1
 ```
 
 ## 🚀 Quick Start
@@ -74,16 +72,16 @@ make up sparse      # 🟢 docker/sparse_compose_serving.yml — sparse embeddin
 make up hybrid      # 🟡 docker/hybrid_compose_serving.yml — dense + sparse together
 ```
 
-`hybrid` runs both models at once as separate containers (`vllm_bge`, `vllm_qwen3`), each on its own port (`VLLM_SPARSE_EMBEDDING_PORT`/`VLLM_DENSE_EMBEDDING_PORT`, default `8100`/`8101`) and sharing the GPU via `SPARSE_GPU_MEM_UTIL`/`DENSE_GPU_MEM_UTIL` (default `0.3`/`0.6`). Adjust the memory utilization values in `.env` so they fit within your GPU's VRAM.
+`hybrid` runs both models at once as separate containers (`tei_splade`, `tei_qwen3`), each on its own port (`TEI_SPARSE_EMBEDDING_PORT`/`TEI_DENSE_EMBEDDING_PORT`, default `8101`/`8100`).
 
 ```bash
 make up hybrid
 make ps hybrid
 ```
 ```text
-NAME                    SERVICE      STATUS          PORTS
-vllm_dense_embedding    vllm_qwen3   Up 14 seconds   0.0.0.0:8101->8000/tcp
-vllm_sparse_embedding   vllm_bge     Up 2 minutes    0.0.0.0:8100->8000/tcp
+NAME                   SERVICE      STATUS          PORTS
+tei_dense_embedding    tei_qwen3    Up 14 seconds   0.0.0.0:8100->80/tcp
+tei_sparse_embedding   tei_splade   Up 2 minutes    0.0.0.0:8101->80/tcp
 ```
 
 ⚠️ `down`, `logs`, `ps`, and `pull` need the model name too once a non-default model is running (e.g. `make logs hybrid`) — without it they'd silently target the default `dense` compose file and appear to hang or show nothing, so they now fail fast with a reminder instead:
@@ -109,8 +107,8 @@ pip install openai requests httpx python-dotenv
 | Script | Model(s) | Embedding type | Example |
 | --- | --- | --- | --- |
 | 🟣 `scripts/dense_embedding_example.py` | Qwen3 | Dense | `python scripts/dense_embedding_example.py "Hello world" "Another sentence"` |
-| 🟢 `scripts/sparse_embedding_example.py` | BGE-M3 | Sparse | `python scripts/sparse_embedding_example.py` |
-| 🟡 `scripts/hybrid_embedding_example.py` | BGE-M3 + Qwen3 | Dense + Sparse | `python scripts/hybrid_embedding_example.py` |
+| 🟢 `scripts/sparse_embedding_example.py` | SPLADE | Sparse | `python scripts/sparse_embedding_example.py` |
+| 🟡 `scripts/hybrid_embedding_example.py` | SPLADE + Qwen3 | Dense + Sparse | `python scripts/hybrid_embedding_example.py` |
 
 `dense_embedding_example.py` calls the running service using both the `openai` client and raw `requests`, and accepts sentences as CLI args:
 
@@ -122,7 +120,7 @@ python scripts/dense_embedding_example.py "Hello world" "Another sentence"
 [requests] 'Hello world': dim=1024 [0.012, -0.034, 0.056, ...]...
 ```
 
-`sparse_embedding_example.py` tokenizes each sentence, then pools it into a sparse `{token_id: weight}` map:
+`sparse_embedding_example.py` calls the `/embed_sparse` endpoint, which returns each sentence's sparse `{token_id: weight}` map directly:
 
 ```bash
 python scripts/sparse_embedding_example.py

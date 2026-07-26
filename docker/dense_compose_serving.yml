@@ -1,7 +1,7 @@
 services:
-  vllm_embedding:
-    image: vllm/vllm-openai:v0.24.0
-    container_name: vllm_dense_embedding
+  tei_embedding:
+    image: ghcr.io/huggingface/text-embeddings-inference:cuda-1.9
+    container_name: tei_dense_embedding
     restart: unless-stopped
     deploy:
       resources:
@@ -13,18 +13,18 @@ services:
               options:
                 runtime: nvidia
     ports:
-      - "${VLLM_DENSE_EMBEDDING_PORT:-8100}:8000"
+      - "${TEI_DENSE_EMBEDDING_PORT:-8100}:80"
     volumes:
-      - vllm-cache:/root/.cache/huggingface/hub
+      - tei-cache:/data
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - DISABLE_UVICORN_PROPAGATION=true
-      - VLLM_USE_V1=0
+      - HF_TOKEN=${HF_TOKEN:-}
     command: >
-      --model ${DENSE_MODEL_NAME:-Qwen/Qwen3-Embedding-0.6B}
-      --runner pooling
-      --convert embed
+      --model-id ${DENSE_MODEL_NAME:-Qwen/Qwen3-Embedding-0.6B}
       --api-key ${SERVING_API_KEY:-token}
-      --gpu-memory-utilization ${DENSE_GPU_MEM_UTIL:-0.6}
+      --dtype ${TEI_DTYPE:-float16}
+      --max-batch-tokens ${TEI_MAX_BATCH_TOKENS:-16384}
+      --max-concurrent-requests ${TEI_MAX_CONCURRENT_REQUESTS:-512}
+      --payload-limit ${TEI_PAYLOAD_LIMIT:-2000000}
 volumes:
-  vllm-cache:
+  tei-cache:

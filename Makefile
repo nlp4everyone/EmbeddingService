@@ -43,16 +43,16 @@ pull: check-model ## make pull <dense|sparse|hybrid>
 	$(COMPOSE) pull
 
 status: ## Check the dense embedding endpoint health
-	curl -sf http://localhost:$(VLLM_DENSE_EMBEDDING_PORT)/health && echo "OK"
+	curl -sf http://localhost:$(TEI_DENSE_EMBEDDING_PORT)/health && echo "OK"
 
 test: ## Send a sample embedding request to the dense endpoint
-	curl -s http://localhost:$(VLLM_DENSE_EMBEDDING_PORT)/v1/embeddings \
+	curl -s http://localhost:$(TEI_DENSE_EMBEDDING_PORT)/v1/embeddings \
 		-H "Authorization: Bearer $(SERVING_API_KEY)" \
 		-H "Content-Type: application/json" \
 		-d '{"model": "$(DENSE_MODEL_NAME)", "input": "Hello world"}'
 
 clean: down ## Stop the service and remove the model cache volume
-	docker volume rm vllm-cache
+	docker volume rm tei-cache
 
 # Swallow the model name so make doesn't treat it as an unknown target.
 $(MODELS):
