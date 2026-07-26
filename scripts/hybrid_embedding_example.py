@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch both dense (Qwen3) and sparse (BGE-M3) embeddings from the hybrid serving stack."""
+"""Fetch both dense (Qwen3) and sparse (SPLADE) embeddings from the hybrid serving stack."""
 
 # Typing hints
 from typing import List, Dict, Any
@@ -14,10 +14,10 @@ load_dotenv(ENV_PATH)
 
 API_KEY = os.environ.get("SERVING_API_KEY", "token")
 
-SPARSE_PORT = os.environ.get("VLLM_SPARSE_EMBEDDING_PORT", "8101")
-SPARSE_MODEL = os.environ.get("SPARSE_MODEL_NAME", "BAAI/bge-m3")
+SPARSE_PORT = os.environ.get("TEI_SPARSE_EMBEDDING_PORT", "8101")
+SPARSE_MODEL = os.environ.get("SPARSE_MODEL_NAME", "opensearch-project/opensearch-neural-sparse-encoding-multilingual-v1")
 
-DENSE_PORT = os.environ.get("VLLM_DENSE_EMBEDDING_PORT", "8100")
+DENSE_PORT = os.environ.get("TEI_DENSE_EMBEDDING_PORT", "8100")
 DENSE_MODEL = os.environ.get("DENSE_MODEL_NAME", "Qwen/Qwen3-Embedding-0.6B")
 
 
@@ -38,38 +38,15 @@ async def get_dense_embeddings(sentences: List[str],
 
 async def get_sparse_embeddings(sentences: List[str],
                                 timeout: float = 3.0) -> List[Dict[int, float]]:
-    """Fetch sparse embeddings (lexical weights) for each sentence from the BGE-M3 service."""
-    # Step 1: Tokenize all sentences to get token IDs
+    """Fetch sparse embeddings (lexical weights) for each sentence from the SPLADE service."""
     async with httpx.AsyncClient(timeout=timeout) as client:
-        tasks = [
-            client.post(f"http://localhost:{SPARSE_PORT}/tokenize",
-                       json={"model": SPARSE_MODEL, "prompt": sentence})
-            for sentence in sentences
-        ]
-        token_responses: List[httpx.Response] = await asyncio.gather(*tasks)
-    all_tokens = [response.json()["tokens"] for response in token_responses]
-
-    # Step 2: Call the pooling endpoint to get per-token weights
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        result = await client.post(
-            f"http://localhost:{SPARSE_PORT}/pooling",
-            json={"model": SPARSE_MODEL, "input": sentences},
+        response = await client.post(
+            f"http://localhost:{SPARSE_PORT}/embed_sparse",
+            headers={"Authorization": f"Bearer {API_KEY}"},
+            json={"inputs": sentences},
         )
-    all_embeddings = [data["data"] for data in result.json()["data"]]
 
-    # Step 3: Build sparse dictionary mapping {token_id: weight} for each sentence
-    ret = []
-    for sent_tokens, sent_emb in zip(all_tokens, all_embeddings):
-        # Remove BOS (Beginning of Sequence) token if present (token ID 0)
-        if sent_tokens and sent_tokens[0] == 0:
-            sent_tokens = sent_tokens[1:]
-
-        token_embs = {}
-        for token, val in zip(sent_tokens, sent_emb):
-            token_embs[token] = max(val, token_embs.get(token, 0.0))
-        ret.append(token_embs)
-
-    return ret
+    return [{item["index"]: item["value"] for item in embedding} for embedding in response.json()]
 
 
 async def get_hybrid_embeddings(sentences: List[str],
